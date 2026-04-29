@@ -1,0 +1,7 @@
+
+python-dotenv
+pyyaml
+smolagents[gradio,litellm]
+requests
+reportlab
+openai

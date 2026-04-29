@@ -1,0 +1,86 @@
+{
+"price_melovannaya_90": {
+"value": 1.98,
+"comment": "цена мелованной бумаги 90гр. за лист SRA3"
+},
+"price_melovannaya_105": {
+"value": 2.26,
+"comment": "цена мелованной бумаги 105гр. за лист SRA3"
+},
+"price_melovannaya_115": {
+"value": 2.48,
+"comment": "цена мелованной бумаги 115гр. за лист SRA3"
+},
+"price_melovannaya_130": {
+"value": 2.81,
+"comment": "цена мелованной бумаги 130гр. за лист SRA3"
+},
+"price_melovannaya_150": {
+"value": 3.22,
+"comment": "цена мелованной бумаги 150гр. за лист SRA3"
+},
+"price_melovannaya_170": {
+"value": 3.66,
+"comment": "цена мелованной бумаги 170гр. за лист SRA3"
+},
+"price_melovannaya_200": {
+"value": 4.35,
+"comment": "цена мелованной бумаги 200гр. за лист SRA3"
+},
+"price_melovannaya_230": {
+"value": 5.15,
+"comment": "цена мелованной бумаги 230гр. за лист SRA3"
+},
+"price_melovannaya_250": {
+"value": 5.59,
+"comment": "цена мелованной бумаги 250гр. за лист SRA3"
+},
+"price_melovannaya_270": {
+"value": 6.16,
+"comment": "цена мелованной бумаги 270гр. за лист SRA3"
+},
+"price_melovannaya_300": {
+"value": 6.85,
+"comment": "цена мелованной бумаги 300гр. за лист SRA3"
+},
+"price_ofsetnaya_80": {
+"value": 1.35,
+"comment": "цена офсетной бумаги 80гр. за лист SRA3"
+},
+"price_ofsetnaya_100": {
+"value": 1.71,
+"comment": "цена офсетной бумаги 100гр. за лист SRA3"
+},
+"price_ofsetnaya_120": {
+"value": 2.05,
+"comment": "цена офсетной бумаги 120гр. за лист SRA3"
+},
+"price_ofsetnaya_160": {
+"value": 2.73,
+"comment": "цена офсетной бумаги 160гр. за лист SRA3"
+},
+"price_karton_250": {
+"value": 7.81,
+"comment": "цена картона 250гр. за лист SRA3"
+},
+"price_karton_300": {
+"value": 9.37,
+"comment": "цена картона 300гр. за лист SRA3"
+},
+"price_plenka_belaya_glyansevaya": {
+"value": 140.00,
+"comment": "цена самоклеящейся пленки белой глянцевой за лист SRA3"
+},
+"price_plenka_prozrachnaya": {
+"value": 37.00,
+"comment": "цена самоклеящейся пленки прозрачной за лист SRA3"
+},
+"price_bumaga_s_prosechkoy": {
+"value": 15.00,
+"comment": "цена самоклеящейся бумаги с просечкой за лист SRA3"
+},
+"price_bumaga_bez_prosechki": {
+"value": 15.00,
+"comment": "цена самоклеящейся бумаги без просечки за лист SRA3"
+}
+}

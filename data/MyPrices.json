@@ -1,0 +1,455 @@
+{
+  "digitalBaseTirazh": {
+    "value": [
+      10,
+      50,
+      500,
+      1000
+    ],
+    "comment": "опорные тиражи для расчета цены одной страницы A3+"
+  },
+  "priceDigitalPage": {
+    "value": [
+      20,
+      15,
+      11,
+      10.5,
+      10
+    ],
+    "comment": "стоимость печати цветной страницы при соответствующем тираже"
+  },
+  "priceWbPage": {
+    "value": [
+      2.4,
+      6
+    ],
+    "comment": "цена чб страницы для Nuvera и Rico, при этом Nuvera печатает только на бумаге до 150 гр. включительно"
+  },
+  "priceForma": {
+    "value": 150,
+    "comment": "стоимость формы для офсетной печати"
+  },
+  "priceProgonPaper": {
+    "value": 0.54,
+    "comment": "стоимость прогона бумаги для офсетной печати"
+  },
+  "priceProgonKarton": {
+    "value": 0.8,
+    "comment": "стоимость прогона картона для офсетной печати"
+  },
+  "pricePriladkaOffs": {
+    "value": 840,
+    "comment": "стоимость приладки для офсетной печати"
+  },
+  "pricePriladkaOffsBook": {
+    "value": 120,
+    "comment": "стоимость приладки при офсетной печати для многостраничных изданий"
+  },
+  "pricePodborPantonToch": {
+    "value": 1440,
+    "comment": "подбор пантона точный для офсетной печати"
+  },
+  "pricePodborPantonPrib": {
+    "value": 840,
+    "comment": "подбор пантона приблизительный для офсетной печати"
+  },
+  "priceRezka": {
+    "value": 6,
+    "comment": "цена 1-го реза"
+  },
+  "prDostavka": {
+    "value": 400.0,
+    "comment": "стоимость доставки"
+  },
+  "cenaListaA3": {
+    "value": 2.0,
+    "comment": "цена офсетной бумаги 80гр. за лист А3"
+  },
+  "cenaListaA3Mel": {
+    "value": 4.62,
+    "comment": "цена мелованной бумаги 130гр. за лист А3"
+  },
+  "cenaBumvinil": {
+    "value": 160.0,
+    "comment": "цена бумвинила за 1 пог. метр с раскроем"
+  },
+  "cenaForzacPaper": {
+    "value": 6.85,
+    "comment": "цена бумаги на форзац за А3"
+  },
+  "cenaLiner7bc": {
+    "value": 5.55,
+    "comment": "цена бумаги на лайнер для 7БЦ за А3"
+  },
+  "cenaPereplKartona": {
+    "value": 116.5,
+    "comment": "цена переплетного картона"
+  },
+  "cenaCoverKarton": {
+    "value": 12.2,
+    "comment": "цена картона на обложку термоклей или скрепка за А3"
+  },
+  "zhSchListov": {
+    "value": 0.12,
+    "comment": "счет листов руб. за лист для журналов"
+  },
+  "zhBigovka": {
+    "value": 0.6,
+    "comment": "биговка руб. за биговка для журналов"
+  },
+  "zhPodrezka": {
+    "value": 18.0,
+    "comment": "стоимость подрезки журналов в руб. за 3 см"
+  },
+  "zhFalec": {
+    "value": 0.6,
+    "comment": "сборка журналов на скрепку: фальцовка за тетрадь 10 листов"
+  },
+  "zhScrSclad": {
+    "value": 0.36,
+    "comment": "сборка журналов на скрепку: складывание за тетрадь 10 листов"
+  },
+  "zhScrPriladka": {
+    "value": 60.0,
+    "comment": "сборка журналов на скрепку: приладка р."
+  },
+  "zhScrScrepka": {
+    "value": 5.0,
+    "comment": "сборка журналов на скрепку: скрепка руб. за штуку"
+  },
+  "zhVtPriladka": {
+    "value": 60.0,
+    "comment": "сборка журналов втачку: приладка р."
+  },
+  "zhVtSclad": {
+    "value": 2.4,
+    "comment": "сборка журналов втачку: складывание блока с обложкой руб. за журнал"
+  },
+  "zhVtPromazka": {
+    "value": 3.6,
+    "comment": "сборка журналов втачку: промазка блока, руб. за 100 листов"
+  },
+  "zhVtScrepka": {
+    "value": 7.5,
+    "comment": "сборка журналов втачку: скрепки, руб. за штуку"
+  },
+  "zhVtPriklKor": {
+    "value": 14.0,
+    "comment": "сборка журналов втачку: приклейка корешка, руб. за шт."
+  },
+  "zhVtBumvinil": {
+    "value": 3.5,
+    "comment": "сборка журналов втачку: бумвинил"
+  },
+  "bcPodbor": {
+    "value": 0.6,
+    "comment": "сборка 7БЦ: подборка листов"
+  },
+  "bcSborkaBook": {
+    "value": 0.25,
+    "comment": "сборка 7БЦ: сборка книги"
+  },
+  "bcPromazka": {
+    "value": 14.0,
+    "comment": "сборка 7БЦ: промазка блока до 100 листов"
+  },
+  "bcPromazkaPlus": {
+    "value": 7.0,
+    "comment": "сборка 7БЦ: промазка каждые следующие 100 листов"
+  },
+  "bcForzacKley": {
+    "value": [
+      7,
+      5.6,
+      9.8
+    ],
+    "comment": "сборка 7БЦ: приклеивание форзаца для формата А4, для формата А5-А6, если больше 200 страниц, то одинаково 9,8р."
+  },
+  "bcBlokObrab": {
+    "value": 18,
+    "comment": "сборка 7БЦ: обработка блока"
+  },
+  "bcKrugKor": {
+    "value": 9.8,
+    "comment": "сборка 7БЦ: кругление корешка для книги до 200 страниц"
+  },
+  "bcKrugKorPlus": {
+    "value": 1.2,
+    "comment": "сборка 7БЦ: кругление корешка, добавляется на каждые следующие 100 страниц"
+  },
+  "bcVstavKnigi": {
+    "value": 24.15,
+    "comment": "сборка 7БЦ: вставка книги в обложку, блок до 300 страниц"
+  },
+  "bcVstavKnigiPlus": {
+    "value": 6,
+    "comment": "сборка 7БЦ: вставка книги в обложку, добавляется за каждые 100 страниц свыше 300"
+  },
+  "bcKryshkaKley": {
+    "value": 44,
+    "comment": "сборка 7БЦ: стоимость клейки крышки А5 и А6"
+  },
+  "bcKryshkaKleyA4": {
+    "value": 50,
+    "comment": "сборка 7БЦ: стоимость клейки крышки А4"
+  },
+  "bcShitye": {
+    "value": [
+      0.65,
+      10.5,
+      1.1,
+      1.2
+    ],
+    "comment": "ниткошвейка: тариф за тетрадь [офсА5, офсА4, мелА5, мелА4]"
+  },
+  "bcShityePril": {
+    "value": 600,
+    "comment": "ниткошвейка: приладка"
+  },
+  "skPapier": {
+    "value": [
+      43.77,
+      36.0,
+      36.73,
+      36.73,
+      28.86,
+      28.86,
+      0.0
+    ],
+    "comment": "самокопир цена за 500 листов 43х61см в евро"
+  },
+  "skPodbor": {
+    "value": 0.85,
+    "comment": "цена подборки и резки 1 листа А3"
+  },
+  "prNumeracia": {
+    "value": 0.6,
+    "comment": "цена нумерации за 1 удар"
+  },
+  "prNumeraciaPril": {
+    "value": 840,
+    "comment": "нумерация приладка"
+  },
+  "prKlishe": {
+    "value": 33.0,
+    "comment": "цена клише за 1 кв. сантиметр"
+  },
+  "prUdKarton": {
+    "value": 3.48,
+    "comment": "цена картона на 1 удостоверение"
+  },
+  "prUdBumvinil": {
+    "value": 5.31,
+    "comment": "цена бумвинила на 1 удостоверение"
+  },
+  "prUdPorolon": {
+    "value": 18.15,
+    "comment": "цена картона с поролоном на 1 удостоверение"
+  },
+  "prUdTisk": {
+    "value": 6.0,
+    "comment": "удостоверение: цена 1 тиска"
+  },
+  "prUdTiskPril": {
+    "value": 1200.0,
+    "comment": "удостоверение: цена приладки на тиснение"
+  },
+  "prUdSkleyka": {
+    "value": 16.8,
+    "comment": "удостоверение: склейка"
+  },
+  "prUdSkleyPorolon": {
+    "value": 19.5,
+    "comment": "удостоверение: склейка с поролоном"
+  },
+  "prUdFyterPrikl": {
+    "value": 7.0,
+    "comment": "удостоверение: приклейка футеровки"
+  },
+  "prUdFuterPrint": {
+    "value": 5.0,
+    "comment": "удостоверение: печать футеровки"
+  },
+  "prKubPromazFirst": {
+    "value": 7.0,
+    "comment": "кубарики: стоимость промазки первых 50 листов"
+  },
+  "prKubPromazLast": {
+    "value": 0.7,
+    "comment": "кубарики: стоимость промазки каждых последующих 50 листов"
+  },
+  "colRez": {
+    "value": [
+      {
+        "format": "8",
+        "rez1": 7,
+        "rez2": 18
+      },
+      {
+        "format": "4",
+        "rez1": 3,
+        "rez2": 10
+      },
+      {
+        "format": "2",
+        "rez1": 1,
+        "rez2": 6
+      },
+      {
+        "format": "1",
+        "rez1": 0,
+        "rez2": 4
+      }
+    ],
+    "comment": "Блокноты: Количество резов при резке в 1 рез и в 2 реза"
+  },
+  "colPetliBobina": {
+    "value": [
+      87000,
+      60000,
+      42000,
+      32000,
+      25000,
+      21000
+    ],
+    "comment": "количество петель на бобине с пружиной"
+  },
+  "prPruzhina": {
+    "value": 6750.0,
+    "comment": "Стоимость пружины (бобины)"
+  },
+  "prProbivDyrok": {
+    "value": 2.4,
+    "comment": "Стоимость пробивания дырок под пружину на каждые 12 листов"
+  },
+  "colPetelBlock": {
+    "value": [
+      {
+        "format": "8",
+        "korotkaya": 11,
+        "dlinnaya": 17
+      },
+      {
+        "format": "4",
+        "korotkaya": 17,
+        "dlinnaya": 24
+      },
+      {
+        "format": "2",
+        "korotkaya": 24,
+        "dlinnaya": 34
+      },
+      {
+        "format": "1",
+        "korotkaya": 34,
+        "dlinnaya": 48
+      }
+    ],
+    "comment": "количество петель по стороне"
+  },
+  "knPodbor": {
+    "value": 0.6,
+    "comment": "книги: подборка, руб/лист"
+  },
+  "knScladPachek": {
+    "value": 1.2,
+    "comment": "книги: складывание пачек, руб/10листов"
+  },
+  "knScladBlock": {
+    "value": 2.4,
+    "comment": "книги: складывание блока"
+  },
+  "knBigovka": {
+    "value": 1.2,
+    "comment": "книги: руб/биг"
+  },
+  "knPrilBig": {
+    "value": 240.0,
+    "comment": "книги: приладка биговки, руб/книга"
+  },
+  "knTermoKley": {
+    "value": [
+      21.0,
+      18.1
+    ],
+    "comment": "книги: термоклей, руб/книга"
+  },
+  "knFinRez": {
+    "value": 18.0,
+    "comment": "книги: финальная подрезка, руб/книга"
+  },
+  "tirazh": {
+    "value": 1000,
+    "comment": "тираж"
+  },
+  "listovNaA3": {
+    "value": 2,
+    "comment": "листов на А3"
+  },
+  "kolvoForm": {
+    "value": 1,
+    "comment": "количество форм"
+  },
+  "kolvoProgon": {
+    "value": 1,
+    "comment": "количество прогонов для офсетной машины"
+  },
+  "priceProgon": {
+    "value": "priceProgonPaper",
+    "comment": "стоимость прогона для офсетной машины"
+  },
+  "kolvoPantone": {
+    "value": 0,
+    "comment": "количество пантонов для офсетной машины"
+  },
+  "cenaPodboraPantona": {
+    "value": "pricePodborPantonPrib",
+    "comment": "цена подбора пантона для офсетной машины"
+  },
+  "bumDigi": {
+    "value": 0,
+    "comment": "бумага для цифровой печати"
+  },
+  "sumDigi": {
+    "value": 0,
+    "comment": "стоимость цифровой печати"
+  },
+  "bumOfs": {
+    "value": 0,
+    "comment": "бумага для офсетной печати"
+  },
+  "sumOfs": {
+    "value": 0,
+    "comment": "стоимость офсетной печати"
+  },
+  "lamination": {
+    "standard": {
+      "small": {
+        "price": 4.2,
+        "min": 280
+      },
+      "large": {
+        "price": 8.4,
+        "min": 280
+      }
+    },
+    "softtouch": {
+      "small": {
+        "price": 26.6,
+        "min": 280
+      },
+      "large": {
+        "price": 46.2,
+        "min": 280
+      }
+    },
+    "75": {
+      "price": 56.0,
+      "min": 210
+    },
+    "125": {
+      "price": 70.0,
+      "min": 210
+    }
+  }
+}
