@@ -37,6 +37,12 @@ env/
 .env
 .env.local
 
+# Сгенерированные PDF
+tools/output/
+output/
+*.pdf
+
+
 # Gradio
 .gradio/
 
