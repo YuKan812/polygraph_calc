@@ -144,11 +144,12 @@ def run_agent(rag_agent, user_input: str) -> tuple[str, list[dict]]:
         result = rag_agent.run(user_input)
 
         if isinstance(result, dict):
-            pp = result.get("pdf_path")
-            if pp and os.path.exists(pp):
-                with open(pp, "rb") as fh:
-                    pdfs.append({"name": os.path.basename(pp), "bytes": fh.read()})
-            skip = {"items", "pdf_path", "params"}
+            # PDF передаётся как bytes напрямую из bc7 — без чтения с диска
+            pdf_b = result.get("pdf_bytes")
+            pdf_n = result.get("pdf_filename", "bc7.pdf")
+            if pdf_b:
+                pdfs.append({"name": pdf_n, "bytes": pdf_b})
+            skip = {"items", "pdf_path", "pdf_bytes", "pdf_filename", "params"}
             answer = "\n".join(
                 f"**{k}:** {v}" for k, v in result.items() if k not in skip
             )

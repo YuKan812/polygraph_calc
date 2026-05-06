@@ -8,7 +8,7 @@ import math
 from datetime import datetime
 
 # ─────────────────────────────────────────────
-#  Данные для расчётов (перенесены из app.js)
+#  Данные для расчётов
 # ─────────────────────────────────────────────
 CALCULATION_DATA = {
     "A4": {
@@ -125,22 +125,26 @@ MANAGERS = {
 }
 
 def _normalize_manager_name(manager: str) -> str:
-    """Возвращает имя менеджера в кириллице, если ключ известен."""
     manager = (manager or "").strip()
     if not manager:
         return ""
     for key, value in MANAGERS.items():
         if manager.lower() == key.lower() or manager.lower() == value.lower():
             return value
+    # Попытка найти по фамилии
+    for key, value in MANAGERS.items():
+        surname = value.split()[0].lower()
+        if surname in manager.lower():
+            return value
     return manager
 
 
 def _manager_filename(manager_name: str) -> str:
-    """Форматирует имя менеджера для имени файла: фамилия без инициалов."""
     if not manager_name:
         return "unknown"
     surname = manager_name.split()[0]
     return surname.replace(" ", "_").replace('.', '')
+
 
 # ─────────────────────────────────────────────
 #  Основная функция расчёта
@@ -157,50 +161,6 @@ def calculate_bc7(
     manager: str = "",
     notes: str = "",
 ) -> dict:
-    """
-    Рассчитывает стоимость брошюровки 7БЦ (твёрдый переплёт).
-
-    ⚠️ ВАЖНО: Параметр 'polosy' (полосы) — это ОБЩЕЕ КОЛИЧЕСТВО СТРАНИЦ в блоке.
-    Понятия "полосы" и "страницы" в полиграфии — ОДНО И ТО ЖЕ!
-    Если в описании говорится "40 страниц" или "40 полос" — оба означают polosy=40 (не удваивайте!).
-
-    Параметры
-    ----------
-    tirazh        : тираж (штук)
-    format_val    : формат блока — "A4", "A5", "A3", "A6"
-    grammazh      : плотность бумаги (г/м²) — определяет страниц в тетради:
-                    < 100 г/м² → 24 стр/тетрадь
-                    100–129 г/м² → 16 стр/тетрадь
-                    ≥ 130 г/м² → 8 стр/тетрадь
-    polosy        : ОБЩЕЕ КОЛИЧЕСТВО ПОЛОС (СТРАНИЦ) в блоке (ОДНО И ТО ЖЕ!)
-                    Используется: signatures = ceil(polosy / стр_в_тетради)
-    rounding      : кругление корешка (True / False)
-    cardboard     : толщина картона — "1.5", "1.75", "2.0", "2.5"
-    cover_material: материал обложки — "bumvinil" или "paper"
-    cover_color   : цветность печати обложки (например, "41" для 4+1, "0" для без печати)
-    manager       : ключ или имя менеджера (необязательно)
-    notes         : произвольные заметки (необязательно)
-
-    Возвращает
-    ----------
-    dict с ключами:
-      "items"            — список строк расчёта (operation, formula, cost)
-      "total_cost"       — итог брошюровки 7БЦ
-      "unit_price"       — цена за единицу
-      "assembly_cost"    — стоимость сборки КШС (фальцовка/подъём + шитьё)
-      "assembly_unit"    — цена сборки КШС за единицу
-      "params"           — сводка параметров для отчёта
-    
-    Пример
-    ------
-    >>> result = calculate_bc7(
-    ...     tirazh=100,
-    ...     format_val="A4",
-    ...     grammazh=80,
-    ...     polosy=40,      # ← 40 полос = 40 страниц! Не удваивайте!
-    ...     cover_color="40"
-    ... )
-    """
     if format_val not in CALCULATION_DATA:
         return {"ошибка": f"Неизвестный формат: {format_val}. Допустимые: A3, A4, A5, A6"}
     if cardboard not in CARDBOARD_PRICES:
@@ -208,7 +168,6 @@ def calculate_bc7(
     if tirazh < 1 or grammazh < 1 or polosy < 1:
         return {"ошибка": "Тираж, граммаж и количество полос должны быть >= 1"}
 
-    # Расчёт количества тетрадей на основе граммажа
     if grammazh < 100:
         tetrad = 24
     elif grammazh < 130:
@@ -227,12 +186,10 @@ def calculate_bc7(
         items.append({"operation": operation, "formula": formula, "cost": cost})
         total += cost
 
-    # 1. Предварительная резка
     pre_cut = fd["preliminary_cut"] * tirazh
     formula = f"{fd['preliminary_cut']} × {tirazh}" if fd["preliminary_cut"] > 0 else "Не требуется"
     add("Предварительная резка", formula, pre_cut)
 
-    # 2. Фальцовка / Подъём
     if tirazh > 300:
         lift_price = fd["lifting_a4"] if format_val in ("A4", "A3") else fd["lifting_a5"]
         folding_cost = lift_price * signatures * tirazh
@@ -244,76 +201,49 @@ def calculate_bc7(
         folding_formula = f"{fd['folding']} × {signatures} × {tirazh}"
     add(folding_op, folding_formula, folding_cost)
 
-    # 3. Шитьё
     sewing_cost = (signatures * fd["sewing_multiplier"] * tirazh * fd["sewing_coefficient"]
                    + fd["sewing_fixed"])
     sewing_formula = (f"{signatures} × {fd['sewing_multiplier']} × {tirazh} "
                       f"× {fd['sewing_coefficient']} + {fd['sewing_fixed']}")
     add("Шитьё", sewing_formula, sewing_cost)
 
-    # 4. Форзацы
     add("Форзацы", f"{fd['endpapers']} × {tirazh}", fd["endpapers"] * tirazh)
-
-    # 5. Приклейка форзацев
     add("Приклейка форзацев", f"{fd['endpaper_gluing']} × {tirazh}", fd["endpaper_gluing"] * tirazh)
-
-    # 6. Резка блока
     add("Резка блока", f"{fd['block_cutting']} × {tirazh}", fd["block_cutting"] * tirazh)
 
-    # 7. Промазка
     impregn_basic = fd["impregnation"] * tirazh
     impregn_cost = max(impregn_basic, fd["impregnation_minimum"])
     add("Промазка",
         f"max({fd['impregnation']} × {tirazh}, {fd['impregnation_minimum']})",
         impregn_cost)
 
-    # 8. Обработка блока
     add("Обработка блока", f"{fd['block_processing']} × {tirazh}", fd["block_processing"] * tirazh)
 
-    # 9. Картон
     cardboard_cost = (price_karton / fd["cardboard_divisor"]) * tirazh
-    add("Картон",
-        f"{price_karton} ÷ {fd['cardboard_divisor']} × {tirazh}",
-        cardboard_cost)
+    add("Картон", f"{price_karton} ÷ {fd['cardboard_divisor']} × {tirazh}", cardboard_cost)
 
-    # 10. Резка картона
     cardboard_cut = (cardboard_cost / tirazh / 2) * tirazh
-    add("Резка картона",
-        f"{cardboard_cost / tirazh:.2f} ÷ 2 × {tirazh}",
-        cardboard_cut)
+    add("Резка картона", f"{cardboard_cost / tirazh:.2f} ÷ 2 × {tirazh}", cardboard_cut)
 
-    # 11. Крышка
     add("Крышка", f"{fd['cover']} × {tirazh}", fd["cover"] * tirazh)
-
-    # 12. Вставка
     add("Вставка", f"{fd['insert']} × {tirazh}", fd["insert"] * tirazh)
 
-    # 13. Бумвинил (только если материал обложки — бумвинил)
     if cover_material == "bumvinil":
-        bumvinil_cost = fd["bumvinil"] * tirazh
-        bumvinil_formula = f"{fd['bumvinil']} × {tirazh}"
-        add("Бумвинил", bumvinil_formula, bumvinil_cost)
-    # Если cover_material == "paper", бумвинил не добавляется вообще
+        add("Бумвинил", f"{fd['bumvinil']} × {tirazh}", fd["bumvinil"] * tirazh)
 
-    # 14. Кругление корешка
     if rounding:
-        rounding_cost = fd["rounding"] * tirazh
-        rounding_formula = f"{fd['rounding']} × {tirazh}"
+        add("Кругление корешка", f"{fd['rounding']} × {tirazh}", fd["rounding"] * tirazh)
     else:
-        rounding_cost = 0
-        rounding_formula = "Не применяется"
-    add("Кругление корешка", rounding_formula, rounding_cost)
+        add("Кругление корешка", "Не применяется", 0)
 
-    # 15. Клей
     add("Клей", f"{fd['glue']} × {tirazh}", fd["glue"] * tirazh)
 
-    # 16. Сборка КШС (справочная строка, НЕ прибавляется к итогу повторно)
     assembly_cost = folding_cost + sewing_cost
     items.append({
         "operation": "Сборка КШС",
         "formula": f"{folding_op} + Шитьё",
         "cost": assembly_cost,
-        "is_summary": True,   # маркер: не суммировать дважды
+        "is_summary": True,
     })
 
     manager_name = MANAGERS.get(manager, manager) if manager else ""
@@ -344,83 +274,51 @@ def calculate_bc7(
 #  Генерация PDF
 # ─────────────────────────────────────────────
 def _fmt(number: float) -> str:
-    """Форматирует число в рублях: 1 234,56"""
     s = f"{number:,.2f}"
-    # Python использует запятую для тысяч — нужен пробел + запятая для копеек
     int_part, dec_part = s.split(".")
-    int_part = int_part.replace(",", "\u00a0")   # неразрывный пробел
+    int_part = int_part.replace(",", "\u00a0")
     return f"{int_part},{dec_part}"
 
 
 def generate_pdf(result: dict, output_path: str) -> str:
-    """
-    Генерирует PDF-отчёт из результата calculate_bc7().
-
-    Параметры
-    ----------
-    result      : возвращаемое значение calculate_bc7()
-    output_path : путь к выходному PDF-файлу
-
-    Возвращает полный путь к созданному файлу.
-    """
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.units import mm
     from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
     )
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
 
-    # ── Регистрация шрифтов с поддержкой кириллицы ──────────────────────────
     font_paths = [
         "/usr/share/fonts/truetype/dejavu",
         "C:\\Windows\\Fonts",
         "/System/Library/Fonts",
-        os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts"),
     ]
-
-    font_found = False
     for path in font_paths:
         normal_path = os.path.join(path, "DejaVuSans.ttf")
         bold_path = os.path.join(path, "DejaVuSans-Bold.ttf")
-        
-        # На Windows DejaVu может не быть, пробуем Arial как альтернативу
         if not os.path.exists(normal_path):
             normal_path = os.path.join(path, "arial.ttf")
             bold_path = os.path.join(path, "arialbd.ttf")
-
         if os.path.exists(normal_path) and os.path.exists(bold_path):
             pdfmetrics.registerFont(TTFont("DejaVu", normal_path))
             pdfmetrics.registerFont(TTFont("DejaVu-Bold", bold_path))
             pdfmetrics.registerFontFamily("DejaVu", normal="DejaVu", bold="DejaVu-Bold")
-            font_found = True
             break
 
-    if not font_found:
-        # Если ничего не нашли, используем стандартные шрифты (могут быть проблемы с кириллицей)
-        pass
+    COLOR_CHARCOAL  = colors.Color(38/255, 40/255, 40/255)
+    COLOR_GRAY_200  = colors.Color(245/255, 245/255, 245/255)
+    COLOR_TEAL      = colors.Color(33/255, 128/255, 141/255)
+    COLOR_SLATE_900 = colors.Color(19/255, 52/255, 59/255)
 
-    # ── Цвета из style.css ───────────────────────────────────────────────────
-    COLOR_CHARCOAL  = colors.Color(38/255, 40/255, 40/255)     # --color-charcoal-800
-    COLOR_GRAY_200  = colors.Color(245/255, 245/255, 245/255)  # --color-gray-200
-    COLOR_TEAL      = colors.Color(33/255, 128/255, 141/255)   # --color-teal-500
-    COLOR_SLATE_900 = colors.Color(19/255, 52/255, 59/255)     # --color-slate-900
-
-    # ── Стили параграфов ─────────────────────────────────────────────────────
     def style(name, font="DejaVu", size=10, leading=14, color=COLOR_SLATE_900, bold=False, **kw):
-        return ParagraphStyle(
-            name,
-            fontName="DejaVu-Bold" if bold else font,
-            fontSize=size,
-            leading=leading,
-            textColor=color,
-            **kw,
-        )
+        return ParagraphStyle(name, fontName="DejaVu-Bold" if bold else font,
+                              fontSize=size, leading=leading, textColor=color, **kw)
 
     s_title   = style("title",   size=14, leading=18, bold=True)
-    s_date    = style("date",    size=12, leading=16, bold=True, alignment=2)  # right
+    s_date    = style("date",    size=12, leading=16, bold=True, alignment=2)
     s_manager = style("manager", size=11, leading=15, bold=True)
     s_desc    = style("desc",    size=9,  leading=13)
     s_notes   = style("notes",   size=9,  leading=13, backColor=COLOR_GRAY_200,
@@ -431,21 +329,16 @@ def generate_pdf(result: dict, output_path: str) -> str:
     s_footer  = style("footer",  size=9,  leading=13)
     s_footer_b= style("footer_b",size=10, leading=14, bold=True)
 
-    # ── Документ ─────────────────────────────────────────────────────────────
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-    doc = SimpleDocTemplate(
-        output_path,
-        pagesize=A4,
-        leftMargin=15*mm, rightMargin=15*mm,
-        topMargin=12*mm,  bottomMargin=15*mm,
-        title="Расчёт 7БЦ",
-    )
+    doc = SimpleDocTemplate(output_path, pagesize=A4,
+                            leftMargin=15*mm, rightMargin=15*mm,
+                            topMargin=12*mm, bottomMargin=15*mm,
+                            title="Расчёт 7БЦ")
 
     params = result["params"]
     story  = []
-    W      = doc.width   # ширина рабочей зоны
+    W      = doc.width
 
-    # ── 1. Шапка: название + дата ─────────────────────────────────────────
     today = datetime.now().strftime("%d.%m.%Y")
     header_table = Table(
         [[Paragraph("Калькулятор стоимости брошюровки 7БЦ", s_title),
@@ -460,101 +353,69 @@ def generate_pdf(result: dict, output_path: str) -> str:
     story.append(header_table)
     story.append(Spacer(1, 6*mm))
 
-    # ── 2. Менеджер ──────────────────────────────────────────────────────
     if params["manager"]:
         story.append(Paragraph(f"Менеджер: {params['manager']}", s_manager))
         story.append(Spacer(1, 3*mm))
 
-    # ── 3. Параметры расчёта ─────────────────────────────────────────────
     rounding_txt = ", Кругление корешка: да" if params["rounding"] else ""
-    desc = (
-        f"Тираж: {params['tirazh']}, "
-        f"Формат: {params['format']}, "
-        f"Полос (страниц): {params['polosy']}, "
-        f"Тетрадей: {params['signatures']}"
-        f"{rounding_txt}, "
-        f"Картон: {params['cardboard']}, "
-        f"Обложка: {params['cover_material']}"
-    )
+    desc = (f"Тираж: {params['tirazh']}, Формат: {params['format']}, "
+            f"Полос (страниц): {params['polosy']}, Тетрадей: {params['signatures']}"
+            f"{rounding_txt}, Картон: {params['cardboard']}, Обложка: {params['cover_material']}")
     story.append(Paragraph(desc, s_desc))
     story.append(Spacer(1, 3*mm))
 
-    # ── 4. Заметки ───────────────────────────────────────────────────────
     if params["notes"]:
         story.append(Paragraph(f"Заметки: {params['notes']}", s_notes))
         story.append(Spacer(1, 3*mm))
 
-    # ── 5. Заголовок таблицы ─────────────────────────────────────────────
     story.append(Paragraph("Расчёт стоимости:", s_section))
     story.append(Spacer(1, 3*mm))
 
-    # ── 6. Таблица расчётов ──────────────────────────────────────────────
     col_op  = W * 0.35
     col_fml = W * 0.45
     col_sum = W * 0.20
 
-    tbl_data = [[
-        Paragraph("Операция", s_cell_b),
-        Paragraph("Расчёт", s_cell_b),
-        Paragraph("Стоимость, руб.", s_cell_b),
-    ]]
+    tbl_data = [[Paragraph("Операция", s_cell_b),
+                 Paragraph("Расчёт", s_cell_b),
+                 Paragraph("Стоимость, руб.", s_cell_b)]]
 
-    summary_rows = []   # индексы строк-справок (КШС)
-
+    summary_rows = []
     for i, item in enumerate(result["items"], start=1):
         is_summary = item.get("is_summary", False)
         cost_txt = _fmt(item["cost"]) if not is_summary else "= " + _fmt(item["cost"])
         cs = s_cell_b if is_summary else s_cell
-        tbl_data.append([
-            Paragraph(item["operation"], cs),
-            Paragraph(item["formula"],   cs),
-            Paragraph(cost_txt,          cs),
-        ])
+        tbl_data.append([Paragraph(item["operation"], cs),
+                         Paragraph(item["formula"], cs),
+                         Paragraph(cost_txt, cs)])
         if is_summary:
             summary_rows.append(i)
 
     tbl = Table(tbl_data, colWidths=[col_op, col_fml, col_sum])
-
     tbl_style = [
-        # Шапка
-        ("BACKGROUND",   (0, 0), (-1, 0),  COLOR_GRAY_200),
-        ("FONTNAME",     (0, 0), (-1, 0),  "DejaVu-Bold"),
-        ("FONTSIZE",     (0, 0), (-1, -1), 9),
-        # Общее
-        ("GRID",         (0, 0), (-1, -1), 0.5, COLOR_CHARCOAL),
-        ("VALIGN",       (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING",   (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
-        ("LEFTPADDING",  (0, 0), (-1, -1), 5),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-        # Выравнивание суммы вправо
-        ("ALIGN",        (2, 0), (2, -1),  "RIGHT"),
+        ("BACKGROUND",    (0, 0), (-1, 0),  COLOR_GRAY_200),
+        ("FONTNAME",      (0, 0), (-1, 0),  "DejaVu-Bold"),
+        ("FONTSIZE",      (0, 0), (-1, -1), 9),
+        ("GRID",          (0, 0), (-1, -1), 0.5, COLOR_CHARCOAL),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
+        ("ALIGN",         (2, 0), (2, -1),  "RIGHT"),
     ]
-
-    # Строки КШС — лёгкий голубоватый фон
     TEAL_LIGHT = colors.Color(33/255, 128/255, 141/255, alpha=0.10)
     for r in summary_rows:
         tbl_style.append(("BACKGROUND", (0, r), (-1, r), TEAL_LIGHT))
         tbl_style.append(("LINEABOVE",  (0, r), (-1, r), 1.0, COLOR_TEAL))
-
     tbl.setStyle(TableStyle(tbl_style))
     story.append(tbl)
     story.append(Spacer(1, 5*mm))
 
-    # ── 7. Итоги ─────────────────────────────────────────────────────────
     totals_data = [
-        [Paragraph(
-            f"Стоимость твёрдого переплёта: <b>{_fmt(result['total_cost'])}</b> руб.",
-            s_footer_b), ""],
-        [Paragraph(
-            f"Цена за единицу: {_fmt(result['unit_price'])} руб.",
-            s_footer), ""],
-        [Paragraph(
-            f"Стоимость сборки КШС: <b>{_fmt(result['assembly_cost'])}</b> руб.",
-            s_footer_b), ""],
-        [Paragraph(
-            f"Цена сборки КШС за единицу: {_fmt(result['assembly_unit'])} руб.",
-            s_footer), ""],
+        [Paragraph(f"Стоимость твёрдого переплёта: <b>{_fmt(result['total_cost'])}</b> руб.", s_footer_b), ""],
+        [Paragraph(f"Цена за единицу: {_fmt(result['unit_price'])} руб.", s_footer), ""],
+        [Paragraph(f"Стоимость сборки КШС: <b>{_fmt(result['assembly_cost'])}</b> руб.", s_footer_b), ""],
+        [Paragraph(f"Цена сборки КШС за единицу: {_fmt(result['assembly_unit'])} руб.", s_footer), ""],
     ]
     totals_tbl = Table(totals_data, colWidths=[W * 0.80, W * 0.20])
     totals_tbl.setStyle(TableStyle([
@@ -571,13 +432,176 @@ def generate_pdf(result: dict, output_path: str) -> str:
     ]))
     story.append(totals_tbl)
 
-    # ── Сборка ───────────────────────────────────────────────────────────
     doc.build(story)
     return output_path
 
 
+def generate_pdf_bytes(result: dict) -> bytes:
+    """
+    Генерирует PDF в памяти и возвращает bytes — без записи на диск.
+    Используется в веб-интерфейсе (Streamlit Cloud и локально).
+    """
+    import io as _io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    # Регистрация шрифтов (та же логика что в generate_pdf)
+    font_paths = [
+        "/usr/share/fonts/truetype/dejavu",
+        "C:\\Windows\\Fonts",
+        "/System/Library/Fonts",
+    ]
+    for path in font_paths:
+        normal_path = os.path.join(path, "DejaVuSans.ttf")
+        bold_path   = os.path.join(path, "DejaVuSans-Bold.ttf")
+        if not os.path.exists(normal_path):
+            normal_path = os.path.join(path, "arial.ttf")
+            bold_path   = os.path.join(path, "arialbd.ttf")
+        if os.path.exists(normal_path) and os.path.exists(bold_path):
+            try:
+                pdfmetrics.registerFont(TTFont("DejaVu", normal_path))
+                pdfmetrics.registerFont(TTFont("DejaVu-Bold", bold_path))
+                pdfmetrics.registerFontFamily("DejaVu", normal="DejaVu", bold="DejaVu-Bold")
+            except Exception:
+                pass  # шрифт уже зарегистрирован
+            break
+
+    COLOR_CHARCOAL  = colors.Color(38/255, 40/255, 40/255)
+    COLOR_GRAY_200  = colors.Color(245/255, 245/255, 245/255)
+    COLOR_TEAL      = colors.Color(33/255, 128/255, 141/255)
+    COLOR_SLATE_900 = colors.Color(19/255, 52/255, 59/255)
+
+    def style(name, font="DejaVu", size=10, leading=14, color=COLOR_SLATE_900, bold=False, **kw):
+        return ParagraphStyle(name, fontName="DejaVu-Bold" if bold else font,
+                              fontSize=size, leading=leading, textColor=color, **kw)
+
+    s_title   = style("title2",   size=14, leading=18, bold=True)
+    s_date    = style("date2",    size=12, leading=16, bold=True, alignment=2)
+    s_manager = style("manager2", size=11, leading=15, bold=True)
+    s_desc    = style("desc2",    size=9,  leading=13)
+    s_notes   = style("notes2",   size=9,  leading=13, backColor=COLOR_GRAY_200,
+                      borderPadding=(5, 6, 5, 6))
+    s_section = style("section2", size=11, leading=15, bold=True)
+    s_cell    = style("cell2",    size=9,  leading=12)
+    s_cell_b  = style("cell_b2",  size=9,  leading=12, bold=True)
+    s_footer  = style("footer2",  size=9,  leading=13)
+    s_footer_b= style("footer_b2",size=10, leading=14, bold=True)
+
+    # Ключевое отличие: пишем в BytesIO, не в файл
+    buf = _io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=15*mm, rightMargin=15*mm,
+                            topMargin=12*mm,  bottomMargin=15*mm,
+                            title="Расчёт 7БЦ")
+
+    params = result["params"]
+    story  = []
+    W      = doc.width
+
+    today = datetime.now().strftime("%d.%m.%Y")
+    header_table = Table(
+        [[Paragraph("Калькулятор стоимости брошюровки 7БЦ", s_title),
+          Paragraph(today, s_date)]],
+        colWidths=[W * 0.70, W * 0.30],
+    )
+    header_table.setStyle(TableStyle([
+        ("VALIGN",      (0, 0), (-1, -1), "BOTTOM"),
+        ("LINEBELOW",   (0, 0), (-1, 0),  1.5, COLOR_CHARCOAL),
+        ("BOTTOMPADDING",(0, 0),(-1, 0),  6),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 6*mm))
+
+    if params["manager"]:
+        story.append(Paragraph(f"Менеджер: {params['manager']}", s_manager))
+        story.append(Spacer(1, 3*mm))
+
+    rounding_txt = ", Кругление корешка: да" if params["rounding"] else ""
+    desc = (f"Тираж: {params['tirazh']}, Формат: {params['format']}, "
+            f"Полос (страниц): {params['polosy']}, Тетрадей: {params['signatures']}"
+            f"{rounding_txt}, Картон: {params['cardboard']}, Обложка: {params['cover_material']}")
+    story.append(Paragraph(desc, s_desc))
+    story.append(Spacer(1, 3*mm))
+
+    if params["notes"]:
+        story.append(Paragraph(f"Заметки: {params['notes']}", s_notes))
+        story.append(Spacer(1, 3*mm))
+
+    story.append(Paragraph("Расчёт стоимости:", s_section))
+    story.append(Spacer(1, 3*mm))
+
+    col_op  = W * 0.35
+    col_fml = W * 0.45
+    col_sum = W * 0.20
+
+    tbl_data = [[Paragraph("Операция", s_cell_b),
+                 Paragraph("Расчёт", s_cell_b),
+                 Paragraph("Стоимость, руб.", s_cell_b)]]
+
+    summary_rows = []
+    for idx, item in enumerate(result["items"], start=1):
+        is_summary = item.get("is_summary", False)
+        cost_txt   = _fmt(item["cost"]) if not is_summary else "= " + _fmt(item["cost"])
+        cs = s_cell_b if is_summary else s_cell
+        tbl_data.append([Paragraph(item["operation"], cs),
+                         Paragraph(item["formula"],   cs),
+                         Paragraph(cost_txt,          cs)])
+        if is_summary:
+            summary_rows.append(idx)
+
+    tbl = Table(tbl_data, colWidths=[col_op, col_fml, col_sum])
+    tbl_style = [
+        ("BACKGROUND",    (0, 0), (-1, 0),  COLOR_GRAY_200),
+        ("FONTNAME",      (0, 0), (-1, 0),  "DejaVu-Bold"),
+        ("FONTSIZE",      (0, 0), (-1, -1), 9),
+        ("GRID",          (0, 0), (-1, -1), 0.5, COLOR_CHARCOAL),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
+        ("ALIGN",         (2, 0), (2, -1),  "RIGHT"),
+    ]
+    TEAL_LIGHT = colors.Color(33/255, 128/255, 141/255, alpha=0.10)
+    for r in summary_rows:
+        tbl_style.append(("BACKGROUND", (0, r), (-1, r), TEAL_LIGHT))
+        tbl_style.append(("LINEABOVE",  (0, r), (-1, r), 1.0, COLOR_TEAL))
+    tbl.setStyle(TableStyle(tbl_style))
+    story.append(tbl)
+    story.append(Spacer(1, 5*mm))
+
+    totals_data = [
+        [Paragraph(f"Стоимость твёрдого переплёта: <b>{_fmt(result['total_cost'])}</b> руб.", s_footer_b), ""],
+        [Paragraph(f"Цена за единицу: {_fmt(result['unit_price'])} руб.", s_footer), ""],
+        [Paragraph(f"Стоимость сборки КШС: <b>{_fmt(result['assembly_cost'])}</b> руб.", s_footer_b), ""],
+        [Paragraph(f"Цена сборки КШС за единицу: {_fmt(result['assembly_unit'])} руб.", s_footer), ""],
+    ]
+    totals_tbl = Table(totals_data, colWidths=[W * 0.80, W * 0.20])
+    totals_tbl.setStyle(TableStyle([
+        ("BOX",           (0, 0), (-1, -1), 1.5, COLOR_CHARCOAL),
+        ("BACKGROUND",    (0, 0), (-1, -1), COLOR_GRAY_200),
+        ("TOPPADDING",    (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+        ("LINEBELOW",     (0, 1), (-1, 1),  0.5, COLOR_CHARCOAL),
+        ("SPAN",          (0, 0), (-1, 0)),
+        ("SPAN",          (0, 1), (-1, 1)),
+        ("SPAN",          (0, 2), (-1, 2)),
+        ("SPAN",          (0, 3), (-1, 3)),
+    ]))
+    story.append(totals_tbl)
+
+    doc.build(story)
+    return buf.getvalue()  # возвращаем bytes, не путь
+
+
 # ─────────────────────────────────────────────
-#  @tool обёртка для smolagents
+#  @tool обёртка
 # ─────────────────────────────────────────────
 def _make_tool():
     from smolagents import tool
@@ -594,38 +618,102 @@ def _make_tool():
         cover_color: str = "0",
         manager: str = "",
         notes: str = "",
-        save_path: str = "",
     ) -> dict:
         """
         Рассчитывает стоимость брошюровки 7БЦ (твёрдый переплёт) и создаёт PDF-отчёт.
 
-        ⚠️ КРИТИЧНО: Параметр 'polosy' (полосы) — это ОБЩЕЕ КОЛИЧЕСТВО СТРАНИЦ в блоке!
-        Понятия "полосы" и "страницы" в полиграфии — ОДНО И ТО ЖЕ!
-        НЕ путайте и НЕ удваивайте значение (например, "32 страницы (64 полосы)" → это ошибка!
-        Должно быть polosy=32, а не 64).
-
         Args:
-            tirazh        : тираж (штук)
-            format_val    : формат блока — "A4", "A5", "A3" или "A6"
-            grammazh      : плотность бумаги (г/м²) — определяет страниц в тетради
-            polosy        : ОБЩЕЕ КОЛИЧЕСТВО ПОЛОС (СТРАНИЦ) в блоке — ОДНО И ТО ЖЕ!
-                            Пример: polosy=40 означает 40 страниц (полос)
-            rounding      : кругление корешка True/False (по умолчанию False)
-            cardboard     : толщина картона — "1.5", "1.75", "2.0" или "2.5" мм
-            cover_material: материал обложки — "bumvinil" (бумвинил) или "paper" (бумага)
-            cover_color   : цветность печати обложки (например, "41" для 4+1, "0" для без)
-            manager       : имя или ключ менеджера (опционально)
-            notes         : дополнительные заметки (опционально)
-            save_path     : путь для сохранения PDF (если не указан, сохранится в папку output)
+            tirazh: Тираж в штуках.
+
+            format_val: Формат блока — "A4", "A5", "A3", "A6".
+                Нестандартные размеры округлять до ближайшего:
+                205×290 мм → "A4", 145×205 мм → "A5".
+
+            grammazh: Плотность бумаги блока в г/м². Определяет страниц в тетради:
+                менее 100 г/м²  → 24 стр/тетрадь
+                100–129 г/м²   → 16 стр/тетрадь
+                130 г/м² и выше → 8 стр/тетрадь
+
+            polosy: Общее количество страниц (полос) в блоке.
+                ВАЖНО: "страницы" и "полосы" — одно и то же понятие!
+                Если написано "240 страниц" или "240 полос" — передавать polosy=240.
+                НЕ удваивать и НЕ делить пополам.
+
+            rounding: Кругление корешка.
+                True  — только если в запросе явно написано "кругление" или "круглый корешок".
+                False — если "прямой корешок", "без кругления", или не упомянуто (DEFAULT).
+
+            cardboard: Толщина переплётного картона — "1.5", "1.75", "2.0", "2.5".
+                ПРАВИЛО: если толщина в запросе НЕ указана явно — ВСЕГДА использовать "2.0".
+                Не угадывать и не выбирать другое значение по умолчанию.
+
+            cover_material: Материал крышки переплёта. Принимает ТОЛЬКО два значения:
+                "paper"   — бумажная крышка (меловка, офсет, дизайнерская бумага, картон).
+                            Использовать "paper" если обложка описана как:
+                            • меловка (любой граммаж: 115, 130, 150, 200, 250 г/м²)
+                            • офсет на обложку
+                            • картон
+                            • "плёнка глянцевая / матовая" (плёнка = ламинация поверх бумаги,
+                              а не материал крышки — передать в notes)
+                            • "ламинация 75 мкм / 125 мкм" (аналогично — это отделка, не материал)
+                "bumvinil" — крышка из бумвинила (виниловое или тканевое покрытие).
+                            Использовать "bumvinil" ТОЛЬКО если в запросе написано слово
+                            "бумвинил" или "bumvinil".
+                ЧАСТАЯ ОШИБКА: "плёнка глянцевая" ≠ бумвинил! Плёнка — это ламинация
+                поверх бумажной обложки. cover_material при этом остаётся "paper".
+
+            cover_color: Цветность печати обложки.
+                "41"  ← "4+1"   (полноцвет лицо + чёрно-белая оборот)
+                "40"  ← "4+0"   (полноцвет одна сторона)
+                "44"  ← "4+4"   (полноцвет обе стороны)
+                "10"  ← "1+0"   (чёрно-белая одна сторона)
+                "0"   ← без печати, непечатная обложка (DEFAULT)
+                Бумвинил — всегда без печати, поэтому при cover_material="bumvinil"
+                использовать cover_color="0".
+
+            manager: Ключ или имя менеджера (необязательно).
+                Если запрос содержит подпись ("С уважением, ...", "Всегда рада, ...") —
+                извлечь имя и передать сюда.
+                Поддерживаемые ключи: vladimirova, dmitriev, dustova, minenkov,
+                kursanov, pokrovskaja, salnikova, hokhlova, feoktistova, chistyakova.
+                "Лидия Чистякова", "Чистякова" → manager="chistyakova".
+                Если имя не в списке — передать как есть.
+
+            notes: Заметки для менеджера — материалы, отделка, пожелания клиента.
+                Сюда записывать: граммаж и цветность обложки, тип плёнки/ламинации,
+                описание форзацев, любые детали из запроса которые не влияют
+                на расчёт напрямую.
+                Пример: "Обложка меловка 150 г/м² 4+1, плёнка глянцевая.
+                         Форзацы офсет 120 г/м², непечатные."
 
         Returns:
-            Словарь с подробными результатами расчета и путем к PDF.
+            Словарь с результатами расчёта. Ключ "pdf_bytes" содержит PDF как bytes
+            для отображения в браузере без сохранения на диск.
+
+        Примеры разбора запросов:
+
+            Запрос: "Формат 205×290, объём 240 с., офсет 80 г/м² 1+1,
+                     форзацы офсет 120 г/м² непечатные, обложка меловка 150 г/м² 4+1,
+                     корешок прямой, плёнка глянцевая, тираж 20 экз. Лидия Чистякова"
+            Результат:
+                tirazh=20, format_val="A4", grammazh=80, polosy=240,
+                rounding=False,        ← "корешок прямой"
+                cardboard="2.0",       ← не указана → по умолчанию
+                cover_material="paper",← меловка = бумага, НЕ бумвинил!
+                cover_color="41",      ← "4+1"
+                manager="chistyakova", ← из подписи
+                notes="Обложка меловка 150 г/м² 4+1, плёнка глянцевая. Форзацы офсет 120 г/м², непечатные."
+
+            Запрос: "А5, 160 стр., бумвинил, тираж 500 шт., картон 1.75"
+            Результат:
+                tirazh=500, format_val="A5", grammazh=80, polosy=160,
+                rounding=False,
+                cardboard="1.75",      ← явно указан
+                cover_material="bumvinil", ← явно написано "бумвинил"
+                cover_color="0",       ← бумвинил всегда без печати
+                notes=""
         """
-        import os
-        
-        # Обработка имени менеджера (поддержка ключей и кириллицы)
         manager_cyrillic = _normalize_manager_name(manager)
-        
 
         result = calculate_bc7(
             tirazh=tirazh,
@@ -643,60 +731,10 @@ def _make_tool():
         if "ошибка" in result:
             return result
 
-        # Формирование имени файла: bc7_YYYY-MM-DD_HH-MM-SS_Фамилия.pdf
-        date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        manager_filename = _manager_filename(manager_cyrillic)
-        filename = f"bc7_{date_str}_{manager_filename}.pdf"
-
-        # Определение пути сохранения
-        if save_path:
-            # Если указана папка, добавляем имя файла
-            if os.path.isdir(save_path):
-                final_pdf_path = os.path.join(save_path, filename)
-            else:
-                final_pdf_path = save_path
-        else:
-            base = os.path.dirname(os.path.abspath(__file__))
-            out_dir = os.path.join(base, "output")
-            os.makedirs(out_dir, exist_ok=True)
-            final_pdf_path = os.path.join(out_dir, filename)
-
-        generate_pdf(result, final_pdf_path)
-
-        # Открываем PDF в системном просмотрщике
-        try:
-            import os
-            os.startfile(final_pdf_path)
-        except Exception as e:
-            print(f"Не удалось открыть PDF: {e}")
-
-        # ═══════════════════════════════════════════════════════════════════
-        # Вывод результатов в терминал
-        # ═══════════════════════════════════════════════════════════════════
-        print("\n" + "═" * 70)
-        print("✓ РАСЧЁТ БРОШЮРОВКИ 7БЦ")
-        print("═" * 70)
-        print(f"Тип: Брошюровка 7БЦ (твёрдый переплёт)")
-        print(f"Тираж: {tirazh} шт.")
-        print(f"Формат: {format_val}")
-        print(f"Граммаж бумаги: {grammazh} г/м²")
-        print(f"Количество полос (страниц): {polosy} ← одно и то же!")
-        print(f"Тетрадей: {result['params']['signatures']}")
-        print(f"Картон: {result['params']['cardboard']}")
-        print(f"Материал обложки: {result['params']['cover_material']}")
-        print(f"Цветность обложки: {cover_color}")
-        print(f"Кругление корешка: {'Да' if rounding else 'Нет'}")
-        print(f"Менеджер: {manager_cyrillic if manager_cyrillic else '—'}")
-        if notes:
-            print(f"Заметки: {notes}")
-        print("─" * 70)
-        print(f"📊 ИТОГОВАЯ СТОИМОСТЬ: {result['total_cost']:.2f} руб.")
-        print(f"   Цена за единицу: {result['unit_price']:.2f} руб./шт")
-        print(f"📊 СБОРКА КШС: {result['assembly_cost']:.2f} руб.")
-        print(f"   Цена за единицу: {result['assembly_unit']:.2f} руб./шт")
-        print("─" * 70)
-        print(f"💾 PDF сохранён: {final_pdf_path}")
-        print("═" * 70 + "\n")
+        # Генерируем PDF в памяти — диск не используется совсем
+        date_str  = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename  = f"bc7_{date_str}_{_manager_filename(manager_cyrillic)}.pdf"
+        pdf_bytes = generate_pdf_bytes(result)
 
         return {
             "тип_продукции": "Брошюровка 7БЦ",
@@ -714,7 +752,9 @@ def _make_tool():
             "цена_за_единицу": f"{result['unit_price']:.2f} руб.",
             "сборка_КШС_итог": f"{result['assembly_cost']:.2f} руб.",
             "сборка_КШС_ед": f"{result['assembly_unit']:.2f} руб.",
-            "pdf_path": final_pdf_path,
+            # pdf_bytes передаётся в app.py для отображения в браузере
+            "pdf_bytes": pdf_bytes,
+            "pdf_filename": filename,
         }
 
     return calculate_bc7_binding
@@ -723,7 +763,6 @@ def _make_tool():
 try:
     calculate_bc7_binding = _make_tool()
 except ImportError:
-    # smolagents не установлен — используем как обычный модуль
     calculate_bc7_binding = None
 
 
@@ -732,41 +771,8 @@ except ImportError:
 # ─────────────────────────────────────────────
 if __name__ == "__main__":
     r = calculate_bc7(
-        tirazh=500,
-        format_val="A4",
-        grammazh=80,
-        polosy=192,
-        rounding=True,
-        cardboard="2.0",
-        cover_material="bumvinil",
-        manager="vladimirova",
-        notes="Срочный заказ, клиент ждёт к пятнице",
+        tirazh=500, format_val="A4", grammazh=80, polosy=192,
+        rounding=True, cardboard="2.0", cover_material="bumvinil",
+        manager="vladimirova", notes="Срочный заказ",
     )
-
     print(f"Итого: {r['total_cost']:.2f} руб.  /  {r['unit_price']:.2f} руб/шт")
-    print(f"КШС: {r['assembly_cost']:.2f} руб.  /  {r['assembly_unit']:.2f} руб/шт")
-
-    save_input = input("Куда сохранить PDF? Оставьте пустым для папки output: ").strip()
-    if save_input:
-        save_input = os.path.expanduser(save_input)
-        if os.path.isdir(save_input):
-            filename = f"bc7_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{_manager_filename(_normalize_manager_name(r['params']['manager']))}.pdf"
-            pdf_path = os.path.join(save_input, filename)
-        else:
-            pdf_path = save_input
-    else:
-        base = os.path.dirname(os.path.abspath(__file__))
-        out_dir = os.path.join(base, "output")
-        os.makedirs(out_dir, exist_ok=True)
-        filename = f"bc7_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{_manager_filename(_normalize_manager_name(r['params']['manager']))}.pdf"
-        pdf_path = os.path.join(out_dir, filename)
-
-    pdf = generate_pdf(r, pdf_path)
-    print(f"PDF сохранён: {pdf}")
-
-    # Открываем PDF в системном просмотрщике
-    try:
-        import os
-        os.startfile(pdf_path)
-    except Exception as e:
-        print(f"Не удалось открыть PDF: {e}")
